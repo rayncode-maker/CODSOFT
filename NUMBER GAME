@@ -1,0 +1,83 @@
+import java.util.Scanner;
+import java.util.Random;
+
+public class NumberGuessingGame {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        Random random = new Random();
+        
+        int totalGames = 0;
+        int totalWins = 0;
+        int bestScore = Integer.MAX_VALUE;
+        
+        System.out.println("Welcome to the Number Guessing Game!");
+        boolean playAgain;
+        
+        do {
+            totalGames++;
+            int secretNumber = random.nextInt(100) + 1;
+            int maxAttempts = 10;
+            int attempts = 0;
+            boolean guessed = false;
+            
+            System.out.println("\n--- Round " + totalGames + " ---");
+            System.out.println("Guess a number between 1-100. You have " + maxAttempts + " attempts.");
+            
+            while (attempts < maxAttempts && !guessed) {
+                System.out.print("Attempt " + (attempts + 1) + "/" + maxAttempts + ": Enter your guess: ");
+                int guess;
+                
+                // Validate input
+                try {
+                    guess = Integer.parseInt(scanner.nextLine().trim());
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input! Please enter a number.");
+                    continue;
+                }
+                
+                attempts++;
+                
+                // Check guess
+                if (guess == secretNumber) {
+                    guessed = true;
+                    totalWins++;
+                    System.out.println("Correct! You guessed it in " + attempts + " attempts.");
+                    
+                    // Update best score
+                    if (attempts < bestScore) {
+                        bestScore = attempts;
+                    }
+                } else if (guess < secretNumber) {
+                    System.out.println("Too low! Try a higher number.");
+                } else {
+                    System.out.println("Too high! Try a lower number.");
+                }
+            }
+            
+            // Handle failure case
+            if (!guessed) {
+                System.out.println("Out of attempts! The number was: " + secretNumber);
+            }
+            
+            // Play again prompt
+            System.out.print("\nPlay again? (yes/no): ");
+            String response = scanner.nextLine().trim().toLowerCase();
+            playAgain = response.equals("yes") || response.equals("y");
+            
+        } while (playAgain);
+        
+        // Game summary
+        System.out.println("\n=== Game Statistics ===");
+        System.out.println("Total games played: " + totalGames);
+        System.out.println("Games won: " + totalWins);
+        System.out.println("Win rate: " + (totalWins * 100 / totalGames) + "%");
+        
+        if (totalWins > 0) {
+            System.out.println("Best score: " + bestScore + " attempts");
+            System.out.println("Average attempts per win: " + String.format("%.1f", (double) totalWins / totalGames));
+        }
+        
+        System.out.println("\nThanks for playing!");
+        scanner.close();
+    }
+}
