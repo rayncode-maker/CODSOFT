@@ -1,0 +1,115 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+import org.json.JSONObject;
+
+public class CurrencyConverter {
+    private static final String API_KEY = "YOUR_API_KEY"; // Replace with your API key
+    private static final String API_URL = "https://api.exchangerate-api.com/v4/latest/";
+    private static final Map<String, String> CURRENCY_SYMBOLS = new HashMap<>();
+    
+    static {
+        // Initialize currency symbols
+        CURRENCY_SYMBOLS.put("USD", "$");
+        CURRENCY_SYMBOLS.put("EUR", "€");
+        CURRENCY_SYMBOLS.put("GBP", "£");
+        CURRENCY_SYMBOLS.put("JPY", "¥");
+        CURRENCY_SYMBOLS.put("INR", "₹");
+        CURRENCY_SYMBOLS.put("CAD", "C$");
+        CURRENCY_SYMBOLS.put("AUD", "A$");
+        CURRENCY_SYMBOLS.put("CHF", "Fr");
+        CURRENCY_SYMBOLS.put("CNY", "¥");
+        CURRENCY_SYMBOLS.put("MXN", "Mex$");
+        // Add more currencies as needed
+    }
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("Welcome to Currency Converter");
+        System.out.println("=============================");
+        
+        // Get base currency
+        System.out.print("Enter base currency (e.g. USD, EUR, GBP): ");
+        String baseCurrency = scanner.nextLine().toUpperCase();
+        
+        // Get target currency
+        System.out.print("Enter target currency (e.g. USD, EUR, GBP): ");
+        String targetCurrency = scanner.nextLine().toUpperCase();
+        
+        // Get amount to convert
+        System.out.print("Enter amount to convert: ");
+        double amount;
+        try {
+            amount = Double.parseDouble(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid amount! Please enter a valid number.");
+            scanner.close();
+            return;
+        }
+        
+        // Fetch exchange rates
+        try {
+            JSONObject exchangeRates = fetchExchangeRates(baseCurrency);
+            
+            // Check if target currency is available
+            if (!exchangeRates.getJSONObject("rates").has(targetCurrency)) {
+                System.out.println("Target currency not supported: " + targetCurrency);
+                scanner.close();
+                return;
+            }
+            
+            // Get conversion rate
+            double rate = exchangeRates.getJSONObject("rates").getDouble(targetCurrency);
+            
+            // Perform conversion
+            double convertedAmount = amount * rate;
+            
+            // Get currency symbol
+            String symbol = CURRENCY_SYMBOLS.getOrDefault(targetCurrency, targetCurrency + " ");
+            
+            // Format output
+            DecimalFormat df = new DecimalFormat("#,##0.00");
+            
+            // Display result
+            System.out.println("\nConversion Result:");
+            System.out.println("------------------");
+            System.out.println(df.format(amount) + " " + baseCurrency + " = " +
+                               symbol + df.format(convertedAmount) + " " + targetCurrency);
+            
+        } catch (IOException e) {
+            System.out.println("Error fetching exchange rates: " + e.getMessage());
+        }
+        
+        scanner.close();
+    }
+
+    private static JSONObject fetchExchangeRates(String baseCurrency) throws IOException {
+        URL url = new URL(API_URL + baseCurrency + "?api_key=" + API_KEY);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        
+        int responseCode = connection.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            throw new IOException("API request failed with code: " + responseCode);
+        }
+        
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(connection.getInputStream()))) {
+            
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            
+            return new JSONObject(response.toString());
+        }
+    }
+}
