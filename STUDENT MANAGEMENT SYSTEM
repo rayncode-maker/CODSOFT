@@ -1,0 +1,294 @@
+import java.io.*;
+import java.util.*;
+import java.util.regex.*;
+
+class Student implements Serializable {
+    private String id;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private int age;
+    private double gpa;
+
+    public Student(String id, String firstName, String lastName, String email, int age, double gpa) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.age = age;
+        this.gpa = gpa;
+    }
+
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    
+    public int getAge() { return age; }
+    public void setAge(int age) { this.age = age; }
+    
+    public double getGpa() { return gpa; }
+    public void setGpa(double gpa) { this.gpa = gpa; }
+
+    @Override
+    public String toString() {
+        return String.format("| %-8s | %-15s | %-15s | %-25s | %-3d | %-4.2f |",
+                id, firstName, lastName, email, age, gpa);
+    }
+}
+
+class StudentManager {
+    private static final String DATA_FILE = "students.dat";
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[\\w.-]+@[\\w.-]+\\.[a-z]{2,}$");
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[a-zA-Z\\s-]{2,}$");
+    
+    private List<Student> students = new ArrayList<>();
+    private Scanner scanner = new Scanner(System.in);
+
+    public void run() {
+        loadStudents();
+        
+        while (true) {
+            System.out.println("\nSTUDENT MANAGEMENT SYSTEM");
+            System.out.println("1. Add Student");
+            System.out.println("2. Edit Student");
+            System.out.println("3. Search Student");
+            System.out.println("4. Display All Students");
+            System.out.println("5. Delete Student");
+            System.out.println("6. Exit");
+            System.out.print("Enter your choice: ");
+            
+            try {
+                int choice = scanner.nextInt();
+                scanner.nextLine();  // Consume newline
+                
+                switch (choice) {
+                    case 1: addStudent(); break;
+                    case 2: editStudent(); break;
+                    case 3: searchStudent(); break;
+                    case 4: displayStudents(); break;
+                    case 5: deleteStudent(); break;
+                    case 6: 
+                        saveStudents();
+                        System.out.println("Exiting system. Goodbye!");
+                        return;
+                    default: 
+                        System.out.println("Invalid choice! Please enter 1-6.");
+                }
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input! Please enter a number.");
+                scanner.nextLine();  // Clear invalid input
+            }
+        }
+    }
+
+    private void addStudent() {
+        System.out.println("\nADD NEW STUDENT");
+        String id = validateInput("Student ID: ", "ID", 
+            input -> input.matches("STU\\d{5}"), 
+            "ID format: STU followed by 5 digits (e.g., STU12345)");
+        
+        String firstName = validateInput("First Name: ", "First Name", 
+            input -> NAME_PATTERN.matcher(input).matches(),
+            "Only letters, spaces, and hyphens allowed (min 2 characters)");
+        
+        String lastName = validateInput("Last Name: ", "Last Name", 
+            input -> NAME_PATTERN.matcher(input).matches(),
+            "Only letters, spaces, and hyphens allowed (min 2 characters)");
+        
+        String email = validateInput("Email: ", "Email", 
+            input -> EMAIL_PATTERN.matcher(input).matches(),
+            "Invalid email format (e.g., example@domain.com)");
+        
+        int age = Integer.parseInt(validateInput("Age: ", "Age", 
+            input -> input.matches("1[6-9]|[2-5]\\d|6[0-5]"),
+            "Age must be between 16-65"));
+        
+        double gpa = Double.parseDouble(validateInput("GPA: ", "GPA", 
+            input -> {
+                try {
+                    double value = Double.parseDouble(input);
+                    return value >= 0.0 && value <= 4.0;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            },
+            "GPA must be between 0.0-4.0"));
+        
+        students.add(new Student(id, firstName, lastName, email, age, gpa));
+        System.out.println("Student added successfully!");
+    }
+
+    private void editStudent() {
+        if (students.isEmpty()) {
+            System.out.println("No students available to edit.");
+            return;
+        }
+        
+        System.out.print("Enter student ID to edit: ");
+        String id = scanner.nextLine();
+        
+        for (Student student : students) {
+            if (student.getId().equalsIgnoreCase(id)) {
+                System.out.println("Editing student: " + student.getFirstName());
+                
+                student.setFirstName(validateInput("New First Name [" + student.getFirstName() + "]: ", 
+                    "First Name", input -> input.isEmpty() || NAME_PATTERN.matcher(input).matches(),
+                    "Only letters, spaces, and hyphens allowed (min 2 characters)"));
+                
+                student.setLastName(validateInput("New Last Name [" + student.getLastName() + "]: ", 
+                    "Last Name", input -> input.isEmpty() || NAME_PATTERN.matcher(input).matches(),
+                    "Only letters, spaces, and hyphens allowed (min 2 characters)"));
+                
+                student.setEmail(validateInput("New Email [" + student.getEmail() + "]: ", 
+                    "Email", input -> input.isEmpty() || EMAIL_PATTERN.matcher(input).matches(),
+                    "Invalid email format (e.g., example@domain.com)"));
+                
+                String newAge = validateInput("New Age [" + student.getAge() + "]: ", 
+                    "Age", input -> input.isEmpty() || input.matches("1[6-9]|[2-5]\\d|6[0-5]"),
+                    "Age must be between 16-65");
+                if (!newAge.isEmpty()) student.setAge(Integer.parseInt(newAge));
+                
+                String newGpa = validateInput("New GPA [" + student.getGpa() + "]: ", 
+                    "GPA", input -> {
+                        if (input.isEmpty()) return true;
+                        try {
+                            double value = Double.parseDouble(input);
+                            return value >= 0.0 && value <= 4.0;
+                        } catch (NumberFormatException e) {
+                            return false;
+                        }
+                    },
+                    "GPA must be between 0.0-4.0");
+                if (!newGpa.isEmpty()) student.setGpa(Double.parseDouble(newGpa));
+                
+                System.out.println("Student updated successfully!");
+                return;
+            }
+        }
+        System.out.println("Student with ID " + id + " not found.");
+    }
+
+    private void searchStudent() {
+        System.out.print("Enter search term (ID, name, or email): ");
+        String term = scanner.nextLine().toLowerCase();
+        
+        List<Student> results = new ArrayList<>();
+        for (Student student : students) {
+            if (student.getId().toLowerCase().contains(term) ||
+                student.getFirstName().toLowerCase().contains(term) ||
+                student.getLastName().toLowerCase().contains(term) ||
+                student.getEmail().toLowerCase().contains(term)) {
+                results.add(student);
+            }
+        }
+        
+        if (results.isEmpty()) {
+            System.out.println("No matching students found.");
+        } else {
+            displayHeader();
+            for (Student student : results) {
+                System.out.println(student);
+            }
+            displayFooter();
+        }
+    }
+
+    private void displayStudents() {
+        if (students.isEmpty()) {
+            System.out.println("No students in the system.");
+            return;
+        }
+        
+        displayHeader();
+        for (Student student : students) {
+            System.out.println(student);
+        }
+        displayFooter();
+    }
+    
+    private void displayHeader() {
+        System.out.println("\n+----------+-----------------+-----------------+---------------------------+-----+------+");
+        System.out.println("| ID       | First Name      | Last Name       | Email                     | Age | GPA  |");
+        System.out.println("+----------+-----------------+-----------------+---------------------------+-----+------+");
+    }
+    
+    private void displayFooter() {
+        System.out.println("+----------+-----------------+-----------------+---------------------------+-----+------+");
+        System.out.println("Total students: " + students.size());
+    }
+
+    private void deleteStudent() {
+        System.out.print("Enter student ID to delete: ");
+        String id = scanner.nextLine();
+        
+        Iterator<Student> iterator = students.iterator();
+        while (iterator.hasNext()) {
+            Student student = iterator.next();
+            if (student.getId().equalsIgnoreCase(id)) {
+                iterator.remove();
+                System.out.println("Student deleted successfully!");
+                return;
+            }
+        }
+        System.out.println("Student with ID " + id + " not found.");
+    }
+
+    private String validateInput(String prompt, String fieldName, Validator validator, String errorMessage) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            
+            if (input.isEmpty()) {
+                System.out.println(fieldName + " cannot be empty!");
+                continue;
+            }
+            
+            if (validator.validate(input)) {
+                return input;
+            }
+            
+            System.out.println("Invalid " + fieldName + "! " + errorMessage);
+        }
+    }
+
+    @FunctionalInterface
+    private interface Validator {
+        boolean validate(String input);
+    }
+
+    private void saveStudents() {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
+            oos.writeObject(students);
+        } catch (IOException e) {
+            System.out.println("Error saving student data: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void loadStudents() {
+        File file = new File(DATA_FILE);
+        if (file.exists()) {
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(DATA_FILE))) {
+                students = (List<Student>) ois.readObject();
+                System.out.println("Student data loaded successfully!");
+            } catch (IOException | ClassNotFoundException e) {
+                System.out.println("Error loading student data: " + e.getMessage());
+            }
+        }
+    }
+}
+
+public class StudentManagementSystem {
+    public static void main(String[] args) {
+        new StudentManager().run();
+    }
+}
